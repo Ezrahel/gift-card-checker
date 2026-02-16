@@ -7,9 +7,10 @@ import { Upload, X, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 const giftCards = [
   'Amazon Gift Card',
-  'Apple Store Gift Card',
+  'Apple Gift Card',
   'Best Buy Gift Card',
   'Google Play Gift Card',
+  'Visa Card',
   'iTunes Gift Card',
   'Netflix Gift Card',
   'PlayStation Gift Card',
